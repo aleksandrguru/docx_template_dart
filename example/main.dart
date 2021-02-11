@@ -1,17 +1,29 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:docx_template/src/template.dart';
 import 'package:docx_template/src/model.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file/open_file.dart';
 
 ///
 /// Read file template.docx, produce it and save
 ///
 void main() async {
-  final f = File("template.docx");
-  final docx = await DocxTemplate.fromBytes(await f.readAsBytes());
+  WidgetsFlutterBinding.ensureInitialized();
+  ByteData templatedox = await rootBundle.load('assets/dogtempl.docx');
+  Uint8List audioUint8List = templatedox.buffer
+      .asUint8List(templatedox.offsetInBytes, templatedox.lengthInBytes);
+  List<int> audioListInt = audioUint8List.cast<int>();
+  final docx = await DocxTemplate.fromBytes(audioListInt);
 
-  // Load test image for inserting in docx
-  final testFileContent = await File('test.jpg').readAsBytes();
+   Load test image for inserting in docx
+   ByteData imagefile = await rootBundle.load('assets/test.jpg');
+   Uint8List imagebuff = imagefile.buffer
+      .asUint8List(imagefile.offsetInBytes, imagefile.lengthInBytes);
+   List<int> testFileContent = imagebuff.cast<int>();
 
   Content c = Content();
   c
@@ -83,8 +95,13 @@ void main() async {
     ..add(TextContent('multilineText2', 'line 1\nline 2\n line 3'))
     ..add(ImageContent('img', testFileContent));
   ;
+  
+    Directory appDocDir = await getApplicationDocumentsDirectory();
+    String filePath = '${appDocDir.path}/generated.docx';
 
-  final d = await docx.generate(c);
-  final of = File('generated.docx');
-  await of.writeAsBytes(d);
+    final d = await docx.generate(c);
+    final of = File(filePath);
+    await of.writeAsBytes(d);
+  
+    OpenFile.open('${appDocDir.path}/generated.docx');
 }
